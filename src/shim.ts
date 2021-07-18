@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { isPlainObject } from 'is-plain-object'
 import { typeDefaults } from './sensibles'
 import { config } from './config'
@@ -11,7 +12,7 @@ const isArray =
     return Object.prototype.toString.call(value) === '[object Array]'
   }
 
-function type<T = any>(name: string, props: any = {}, validable = false): T {
+function type(name: string, props: any = {}, validable = false): any {
   const descriptors: PropertyDescriptorMap = {
     _vueTypes_name: {
       value: name,
@@ -21,8 +22,11 @@ function type<T = any>(name: string, props: any = {}, validable = false): T {
       value(v) {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const t = this
-        if (v === undefined && !t.default) {
-          return t
+        if (v === undefined) {
+          if ('default' in this) {
+            delete this.default
+          }
+          return this
         }
         if (isArray(v)) {
           t.default = () => [].concat(v)
@@ -48,40 +52,34 @@ function type<T = any>(name: string, props: any = {}, validable = false): T {
       value() {},
     }
   }
-  return Object.assign(
-    Object.defineProperties(
-      {
-        validator: () => true,
-      },
-      descriptors,
-    ),
-    props,
-  )
+  if (!props.validator) {
+    props.validator = () => true
+  }
+
+  return Object.defineProperties(props, descriptors)
 }
 
 export { config }
 
-export const any = () => type('any', {}, true)
-export const func = <T = any>() => type<T>('func', { type: Function }, true)
+export const any = <T = any>() => type('any', {}, true)
+export const func = <T = any>() => type('func', { type: Function }, true)
 export const bool = () => type('bool', { type: Boolean }, true)
-export const string = () => type('string', { type: String }, true)
-export const number = () => type('number', { type: Number }, true)
-export const array = <T = any>() => type<T>('array', { type: Array }, true)
-export const object = <T = any>() => type<T>('object', { type: Object }, true)
+export const string = <T = any>() => type('string', { type: String }, true)
+export const number = <T = any>() => type('number', { type: Number }, true)
+export const array = <T = any>() => type('array', { type: Array }, true)
+export const object = <T = any>() => type('object', { type: Object }, true)
 export const symbol = () => type('symbol')
-export const integer = () => type('integer', { type: Number })
-/* eslint-disable @typescript-eslint/no-unused-vars */
-export const oneOf = <T = any>(a: any) => type<T>('oneOf')
-export const custom = <T = any>(a: any) => type<T>('custom')
+export const integer = <T = any>() => type('integer', { type: Number })
+export const oneOf = <T = any>(a: any) => type('oneOf')
+export const custom = <T = any>(a: any) => type('custom')
 export const instanceOf = <T = any>(Constr: any) =>
-  type<T>('instanceOf', { type: Constr })
-export const oneOfType = <T = any>(a: any) => type<T>('oneOfType')
-export const arrayOf = <T = any>(a: any) => type<T>('arrayOf', { type: Array })
+  type('instanceOf', { type: Constr })
+export const oneOfType = <T = any>(a: any) => type('oneOfType')
+export const arrayOf = <T = any>(a: any) => type('arrayOf', { type: Array })
 
-export const objectOf = <T = any>(a: any) =>
-  type<T>('objectOf', { type: Object })
+export const objectOf = <T = any>(a: any) => type('objectOf', { type: Object })
 export const shape = <T = any>(a: any) =>
-  dfn(type<T>('shape', { type: Object }), 'loose', {
+  dfn(type('shape', { type: Object }), 'loose', {
     get() {
       return this
     },
@@ -105,6 +103,22 @@ function createValidator(
 
   return dfn(root, name, descr)
 }
+
+export function fromType(name: string, source: any, props: any = {}) {
+  return type(
+    name,
+    {
+      ...source,
+      ...props,
+      validator: null,
+    },
+    !!source.validable,
+  )
+}
+
+export const toValidableType = <T>(name: string, props: any) =>
+  type(name, props, true)
+export const toType = <T>(name: string, props: any) => type(name, props)
 
 const BaseVueTypes = /*#__PURE__*/ (() =>
   class BaseVueTypes {
