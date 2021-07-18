@@ -19,7 +19,7 @@ function type(name: string, props: any = {}, validable = false): any {
       writable: true,
     },
     def: {
-      value(v) {
+      value(v: any) {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const t = this
         if (v === undefined) {
@@ -61,24 +61,26 @@ function type(name: string, props: any = {}, validable = false): any {
 
 export { config }
 
-export const any = <T = any>() => type('any', {}, true)
-export const func = <T = any>() => type('func', { type: Function }, true)
-export const bool = () => type('bool', { type: Boolean }, true)
-export const string = <T = any>() => type('string', { type: String }, true)
-export const number = <T = any>() => type('number', { type: Number }, true)
-export const array = <T = any>() => type('array', { type: Array }, true)
-export const object = <T = any>() => type('object', { type: Object }, true)
-export const symbol = () => type('symbol')
-export const integer = <T = any>() => type('integer', { type: Number })
-export const oneOf = <T = any>(a: any) => type('oneOf')
-export const custom = <T = any>(a: any) => type('custom')
-export const instanceOf = <T = any>(Constr: any) =>
-  type('instanceOf', { type: Constr })
-export const oneOfType = <T = any>(a: any) => type('oneOfType')
-export const arrayOf = <T = any>(a: any) => type('arrayOf', { type: Array })
+type TypeShim = <T = any>(...args: any[]) => any
 
-export const objectOf = <T = any>(a: any) => type('objectOf', { type: Object })
-export const shape = <T = any>(a: any) =>
+export const any: TypeShim = () => type('any', {}, true)
+export const func: TypeShim = () => type('func', { type: Function }, true)
+export const bool = () => type('bool', { type: Boolean }, true)
+export const string: TypeShim = () => type('string', { type: String }, true)
+export const number: TypeShim = () => type('number', { type: Number }, true)
+export const array: TypeShim = () => type('array', { type: Array }, true)
+export const object: TypeShim = () => type('object', { type: Object }, true)
+export const symbol = () => type('symbol')
+export const integer: TypeShim = () => type('integer', { type: Number })
+export const oneOf: TypeShim = (a: any) => type('oneOf')
+export const custom: TypeShim = (a: any) => type('custom')
+export const instanceOf: TypeShim = (Constr: any) =>
+  type('instanceOf', { type: Constr })
+export const oneOfType: TypeShim = (a: any) => type('oneOfType')
+export const arrayOf: TypeShim = (a: any) => type('arrayOf', { type: Array })
+
+export const objectOf: TypeShim = (a: any) => type('objectOf', { type: Object })
+export const shape: TypeShim = (a: any) =>
   dfn(type('shape', { type: Object }), 'loose', {
     get() {
       return this
@@ -105,15 +107,9 @@ function createValidator(
 }
 
 export function fromType(name: string, source: any, props: any = {}) {
-  return type(
-    name,
-    {
-      ...source,
-      ...props,
-      validator: null,
-    },
-    !!source.validable,
-  )
+  const t = type(name, Object.assign({}, source, props), !!source.validable)
+  t.validator && delete t.validator
+  return t
 }
 
 export const toValidableType = <T>(name: string, props: any) =>
@@ -176,10 +172,10 @@ const BaseVueTypes = /*#__PURE__*/ (() =>
 
 export function createTypes(defs: Partial<VueTypesDefaults> = typeDefaults()) {
   return class extends BaseVueTypes {
-    static defaults = { ...defs }
+    static defaults = Object.assign({}, defs)
 
     static get sensibleDefaults() {
-      return { ...this.defaults }
+      return Object.assign({}, this.defaults)
     }
 
     static set sensibleDefaults(v: boolean | Partial<VueTypesDefaults>) {
@@ -188,10 +184,10 @@ export function createTypes(defs: Partial<VueTypesDefaults> = typeDefaults()) {
         return
       }
       if (v === true) {
-        this.defaults = { ...defs }
+        this.defaults = Object.assign({}, defs)
         return
       }
-      this.defaults = { ...v }
+      this.defaults = Object.assign({}, v)
     }
   }
 }
