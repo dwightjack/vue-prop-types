@@ -11,7 +11,8 @@ import {
 } from '../utils'
 
 export default function oneOfType<
-  U extends VueProp<any> | Prop<any>,
+  D extends V,
+  U extends VueProp<any> | Prop<any> = any,
   V = InferType<U>,
 >(arr: U[]) {
   if (!isArray(arr)) {
@@ -22,7 +23,7 @@ export default function oneOfType<
 
   let hasCustomValidators = false
 
-  let nativeChecks: Prop<V>[] = []
+  let nativeChecks: Prop<V>[] | null = []
 
   for (let i = 0; i < arr.length; i += 1) {
     const type = arr[i]
@@ -38,9 +39,12 @@ export default function oneOfType<
       if (isFunction(type.validator)) {
         hasCustomValidators = true
       }
-      if (type.type !== true && type.type) {
-        nativeChecks = nativeChecks.concat(type.type)
+      if (type.type === true || !type.type) {
+        warn('oneOfType - invalid usage of "true" or "null" as types.')
         continue
+      }
+      if (type.type) {
+        nativeChecks = nativeChecks.concat(type.type)
       }
     }
     nativeChecks.push(type as Prop<V>)
@@ -49,16 +53,20 @@ export default function oneOfType<
   // filter duplicates
   nativeChecks = nativeChecks.filter((t, i) => nativeChecks.indexOf(t) === i)
 
+  if (nativeChecks.length === 0) {
+    nativeChecks = null
+  }
+
   if (!hasCustomValidators) {
     // we got just native objects (ie: Array, Object)
     // delegate to Vue native prop check
-    return toType<V>('oneOfType', {
-      type: nativeChecks,
+    return toType<D>('oneOfType', {
+      type: nativeChecks as unknown as PropType<D>,
     })
   }
 
-  return toType<V>('oneOfType', {
-    type: nativeChecks,
+  return toType<D>('oneOfType', {
+    type: nativeChecks as unknown as PropType<D>,
     validator(value) {
       const err: string[] = []
       const valid = arr.some((type) => {
